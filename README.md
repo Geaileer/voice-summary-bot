@@ -3,7 +3,11 @@
 
 
 > An AI-powered Telegram bot that transforms voice messages into structured, concise text summaries.
+## 🎬 Demo
 
+A short demonstration of the Voice Summary Bot in action.
+
+[▶️ Watch the demo](./demo%201.mp4)
 
 
 Voice Summary Bot is a Telegram-based AI application designed to process spoken information and turn it into useful written notes.
