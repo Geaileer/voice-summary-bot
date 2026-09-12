@@ -1,228 +1,844 @@
-# Telegram Voice Summarizer
+\# 🎙️ Voice Summary Bot
 
-## Overview
 
-A Telegram bot that turns 1–10 voice messages into a short summary, key
-points, and a full transcript. Send your voice notes, tap **Done**, and get
-back the essence of what was said — in whatever language you spoke it in,
-regardless of the bot's interface language.
 
-Built as a small, honest MVP: no accounts, no history, no database — just
-a simple pipeline from voice to text to summary.
+> An AI-powered Telegram bot that transforms voice messages into structured, concise text summaries.
 
-## Features
 
-- 🎤 Accepts 1–10 voice messages per session (up to ~10 minutes each), in order
-- 🌍 Automatic language detection per voice message (speech recognition
-  never depends on the chosen interface language)
-- 🧠 AI-generated summary + key points (decisions, tasks, dates, names,
-  agreements) — never invented, only what's actually in the audio
-- 📝 Full transcript, always in the original recording order
-- 🇷🇺 🇬🇧 Russian/English interface, chosen once with `/start`
-- 🗑️ No accounts, no history, no database — session state is temporary and
-  in-memory only, and voice audio is never written to disk
-- 💸 Runs entirely on free API tiers (see [Limitations](#limitations))
 
-## Architecture
+Voice Summary Bot is a Telegram-based AI application designed to process spoken information and turn it into useful written notes.
+
+
+
+Users can send one or multiple voice messages, finish the session, and receive an automatically generated \*\*summary, key points, and full transcript\*\*.
+
+
+
+The project combines asynchronous Telegram bot development, speech-to-text technology, large language models, API integration, error handling, and deployment configuration into a single practical application.
+
+
+
+\---
+
+
+
+\## ✨ Features
+
+
+
+\* 🎙️ \*\*Voice message processing\*\*
+
+\* 🔢 Supports up to \*\*10 voice messages per session\*\*
+
+\* 📝 Automatic \*\*speech-to-text transcription\*\*
+
+\* 🧠 AI-generated \*\*2–4 sentence summary\*\*
+
+\* 🔑 Extraction of \*\*3–5 key points\*\*
+
+\* 📄 Complete \*\*full transcript\*\*
+
+\* 🌍 Automatic detection of the \*\*spoken language\*\*
+
+\* 🇷🇺 Russian and 🇬🇧 English interface
+
+\* 🔄 Voice messages are processed \*\*in their original order\*\*
+
+\* ⚡ Asynchronous processing with `aiogram`
+
+\* 🛡️ API keys stored securely using environment variables
+
+\* 🚫 No database and no permanent storage of voice recordings
+
+\* 🔁 Automatic retry for temporary API rate-limit errors
+
+\* 📦 Docker and Railway deployment configuration
+
+
+
+\---
+
+
+
+\## 🧠 How It Works
+
+
+
+The processing pipeline is divided into several stages:
+
+
+
+```text
+
+Telegram User
+
+&#x20;     │
+
+&#x20;     ▼
+
+Voice Messages
+
+&#x20;     │
+
+&#x20;     ▼
+
+Telegram Bot
+
+&#x20;     │
+
+&#x20;     ▼
+
+Audio Download
+
+&#x20;     │
+
+&#x20;     ▼
+
+Whisper Speech-to-Text
+
+&#x20;     │
+
+&#x20;     ▼
+
+Combined Transcript
+
+&#x20;     │
+
+&#x20;     ▼
+
+Large Language Model
+
+&#x20;     │
+
+&#x20;     ├── Summary
+
+&#x20;     ├── Key Points
+
+&#x20;     └── Full Transcript
+
+&#x20;     │
+
+&#x20;     ▼
+
+Telegram Response
 
 ```
-Telegram (voice messages)
-        │
-        ▼
- aiogram handlers            (app/handlers/*)
-   - collect voice file_ids in FSM memory, in order
-   - "Done" triggers the pipeline
-        │
-        ▼
- audio.py                    (app/services/audio.py)
-   - downloads each voice message from Telegram straight into memory
-        │
-        ▼
- transcription.py            (app/services/transcription.py)
-   - Groq Whisper API, one call per voice message, auto language detection
-        │
-        ▼
- summarization.py            (app/services/summarization.py)
-   - Groq LLM chat completion, structured JSON output
-        │
-        ▼
- formatting.py + Telegram reply (app/utils/formatting.py)
-   - splits long text safely under Telegram's 4096-char message limit
+
+
+
+\### Example
+
+
+
+A user sends several voice messages:
+
+
+
+```text
+
+Voice 1 → Voice 2 → Voice 3 → Done
+
 ```
 
-The Telegram layer never talks to Groq directly — handlers call
-`app/services/pipeline.py`, which calls the transcription and
-summarization services. Swapping either AI provider/model later means
-editing exactly one file (`transcription.py` or `summarization.py`);
-nothing else needs to change.
 
-## Tech Stack
 
-- **Python 3.12**
-- **[aiogram 3](https://docs.aiogram.dev/)** — async Telegram Bot framework
-- **[Groq API](https://console.groq.com/)** — both speech-to-text
-  (`whisper-large-v3-turbo`) and summarization (`llama-3.3-70b-versatile`),
-  free tier
-- **In-memory FSM storage** (aiogram's built-in `MemoryStorage`) — no
-  database
-- **Docker** + **Railway** for deployment
+The bot:
 
-## Setup
 
-### 1. Prerequisites
 
-- [Python 3.12+](https://www.python.org/downloads/) installed
-- A Telegram bot token from [@BotFather](https://t.me/BotFather)
-- A free API key from [Groq Console](https://console.groq.com/keys)
+1\. Downloads the voice messages.
 
-### 2. Clone and install (Windows)
+2\. Transcribes each message separately.
+
+3\. Preserves their original order.
+
+4\. Combines the transcripts.
+
+5\. Sends the text to the language model.
+
+6\. Generates a concise summary and key points.
+
+7\. Returns the final result to the user.
+
+
+
+\---
+
+
+
+\## 🤖 AI Stack
+
+
+
+\### Speech-to-Text
+
+
+
+\*\*Whisper Large V3 Turbo\*\*
+
+
+
+Used to convert Telegram voice messages into text.
+
+
+
+The bot sends each voice message separately for transcription and then combines the results in the correct order.
+
+
+
+\### Language Model
+
+
+
+\*\*OpenAI GPT-OSS 120B via Groq\*\*
+
+
+
+Used to analyze the combined transcript and generate:
+
+
+
+\* a concise summary;
+
+\* key points;
+
+\* a structured final response.
+
+
+
+\### AI Architecture
+
+
+
+The application separates transcription from text generation:
+
+
+
+```text
+
+Audio
+
+&#x20; ↓
+
+Whisper
+
+&#x20; ↓
+
+Transcript
+
+&#x20; ↓
+
+LLM
+
+&#x20; ↓
+
+Structured Result
+
+```
+
+
+
+This separation makes the system easier to maintain and allows individual AI components to be replaced independently.
+
+
+
+\---
+
+
+
+\## 🏗️ Architecture
+
+
+
+The project follows a modular service-oriented structure.
+
+
+
+```text
+
+app/
+
+├── bot.py
+
+├── config.py
+
+├── states.py
+
+│
+
+├── handlers/
+
+│   ├── start.py
+
+│   ├── voice.py
+
+│   └── callbacks.py
+
+│
+
+├── keyboards/
+
+│   └── keyboards.py
+
+│
+
+├── services/
+
+│   ├── audio.py
+
+│   ├── errors.py
+
+│   ├── pipeline.py
+
+│   ├── summarization.py
+
+│   └── transcription.py
+
+│
+
+└── utils/
+
+&#x20;   ├── cleanup.py
+
+&#x20;   ├── formatting.py
+
+&#x20;   ├── retry.py
+
+&#x20;   └── texts.py
+
+```
+
+
+
+\### Main Components
+
+
+
+\*\*Handlers\*\*
+
+
+
+Responsible for Telegram updates, commands, voice messages, and button callbacks.
+
+
+
+\*\*Services\*\*
+
+
+
+Contain the main application logic:
+
+
+
+\* audio processing;
+
+\* transcription;
+
+\* summarization;
+
+\* pipeline orchestration;
+
+\* error handling.
+
+
+
+\*\*Keyboards\*\*
+
+
+
+Contains Telegram inline/reply keyboard definitions.
+
+
+
+\*\*Utils\*\*
+
+
+
+Contains reusable helpers for:
+
+
+
+\* text formatting;
+
+\* cleanup;
+
+\* retries;
+
+\* localized texts.
+
+
+
+\*\*Configuration\*\*
+
+
+
+Loads environment variables and application settings without hardcoding secrets.
+
+
+
+\---
+
+
+
+\## 🛠️ Technology Stack
+
+
+
+| Technology             | Purpose                    |
+
+| ---------------------- | -------------------------- |
+
+| Python 3.12            | Main programming language  |
+
+| aiogram 3              | Telegram Bot API framework |
+
+| Groq API               | AI inference               |
+
+| Whisper Large V3 Turbo | Speech recognition         |
+
+| GPT-OSS 120B           | Text summarization         |
+
+| python-dotenv          | Environment configuration  |
+
+| Docker                 | Containerization           |
+
+| Railway                | Deployment configuration   |
+
+| Git / GitHub           | Version control            |
+
+
+
+\---
+
+
+
+\## 🔐 Security \& Privacy
+
+
+
+The project follows several basic security principles.
+
+
+
+\### Environment Variables
+
+
+
+Sensitive credentials are not stored directly in the source code.
+
+
+
+Required secrets are provided through environment variables:
+
+
+
+```env
+
+BOT\_TOKEN=your\_telegram\_bot\_token
+
+GROQ\_API\_KEY=your\_groq\_api\_key
+
+SUMMARY\_MODEL=openai/gpt-oss-120b
+
+```
+
+
+
+The `.env` file is excluded from Git using `.gitignore`.
+
+
+
+A `.env.example` file is provided so that the required configuration is clear without exposing real credentials.
+
+
+
+\### Data Handling
+
+
+
+The bot does not use a database and does not maintain permanent voice-message history.
+
+
+
+Voice files are processed in memory and are not intentionally written to disk by the application.
+
+
+
+\---
+
+
+
+\## ⚙️ Installation
+
+
+
+\### 1. Clone the repository
+
+
 
 ```bash
-git clone https://github.com/<your-username>/voice-summary-bot.git
+
+git clone https://github.com/Geaileer/voice-summary-bot.git
+
 cd voice-summary-bot
 
+```
+
+
+
+\### 2. Create a virtual environment
+
+
+
+Windows:
+
+
+
+```powershell
+
 python -m venv .venv
-.venv\Scripts\activate
+
+.venv\\Scripts\\activate
+
+```
+
+
+
+Linux / macOS:
+
+
+
+```bash
+
+python3 -m venv .venv
+
+source .venv/bin/activate
+
+```
+
+
+
+\### 3. Install dependencies
+
+
+
+```bash
 
 pip install -r requirements.txt
+
 ```
 
-On macOS/Linux, activate with `source .venv/bin/activate` instead.
 
-### 3. Configure environment variables
+
+\### 4. Configure environment variables
+
+
+
+Create a `.env` file based on `.env.example`:
+
+
+
+```env
+
+BOT\_TOKEN=your\_telegram\_bot\_token
+
+GROQ\_API\_KEY=your\_groq\_api\_key
+
+SUMMARY\_MODEL=openai/gpt-oss-120b
+
+```
+
+
+
+\### 5. Run the bot
+
+
 
 ```bash
-copy .env.example .env
-```
 
-(macOS/Linux: `cp .env.example .env`)
-
-Open `.env` and fill in:
-
-```
-BOT_TOKEN=your-telegram-bot-token
-GROQ_API_KEY=your-groq-api-key
-```
-
-**Never commit your real `.env` file** — it's already listed in
-`.gitignore`, and it contains secrets that must not end up on GitHub.
-
-### 4. Run the bot
-
-```bash
 python -m app.bot
-```
-
-You should see `Bot started, polling for updates...` in the console.
-Open your bot in Telegram and send `/start`.
-
-## Environment Variables
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `BOT_TOKEN` | Yes | — | Telegram bot token from @BotFather |
-| `GROQ_API_KEY` | Yes | — | Free API key from console.groq.com |
-| `STT_MODEL` | No | `whisper-large-v3-turbo` | Groq speech-to-text model |
-| `SUMMARY_MODEL` | No | `llama-3.3-70b-versatile` | Groq chat model for summarization |
-| `MAX_VOICES_PER_SESSION` | No | `10` | Max voice messages per batch |
-| `MAX_VOICE_FILE_SIZE_MB` | No | `20` | Rejects voice messages above this size before download |
-| `REQUEST_TIMEOUT_SECONDS` | No | `120` | Timeout for each Groq API call |
-| `RATE_LIMIT_RETRY_DELAY_SECONDS` | No | `5` | Delay before the single automatic retry on a rate-limit error |
-
-## Usage
-
-1. Send `/start`, choose 🇷🇺 Русский or 🇬🇧 English.
-2. Send 1–10 voice messages (any mix of languages/topics you like).
-3. Watch the "Received: N/10" counter after each one.
-4. Tap **Done**.
-5. Get back 🧠 Summary, 🔑 Key points, and 📝 Transcript.
-6. Send more voice messages any time to start a new batch — no need to
-   run `/start` again unless you want to change the interface language.
-
-## Project Structure
 
 ```
-voice-summary-bot/
-├── app/
-│   ├── bot.py              # Entry point: creates Bot/Dispatcher, starts polling
-│   ├── config.py           # Loads and validates environment variables
-│   ├── states.py           # FSM states (choosing_language / collecting_voices / processing)
-│   ├── handlers/
-│   │   ├── start.py        # /start + language selection
-│   │   ├── voice.py        # Incoming voice messages, per-state fallback replies
-│   │   └── callbacks.py    # Language & "Done" button callbacks
-│   ├── services/
-│   │   ├── audio.py        # Downloads voice messages into memory
-│   │   ├── transcription.py# Groq Whisper speech-to-text
-│   │   ├── summarization.py# Groq LLM summary + key points (JSON output)
-│   │   ├── pipeline.py     # Orchestrates the steps above, maps errors to messages
-│   │   └── errors.py       # Exception types for user-facing error handling
-│   ├── keyboards/
-│   │   └── keyboards.py    # Inline keyboards (language choice, Done button)
-│   └── utils/
-│       ├── texts.py        # Russian/English interface strings
-│       ├── formatting.py   # Splits long results under Telegram's message limit
-│       ├── retry.py        # Single automatic retry on rate-limit errors
-│       └── cleanup.py      # Clears in-memory session state after processing
-├── .env.example
-├── .gitignore
-├── requirements.txt
-├── Dockerfile
-├── railway.toml
-└── README.md
+
+
+
+The bot should start polling Telegram for updates.
+
+
+
+\---
+
+
+
+\## 🐳 Docker
+
+
+
+The project also includes a `Dockerfile` for containerized deployment.
+
+
+
+Build the image:
+
+
+
+```bash
+
+docker build -t voice-summary-bot .
+
 ```
 
-## Deployment (GitHub → Railway)
 
-1. Push this project to a GitHub repository (make sure `.env` is **not**
-   included — check `git status` before your first commit).
-2. In [Railway](https://railway.com/), create a new project and choose
-   **Deploy from GitHub repo**, selecting your repository.
-3. Railway will detect the `Dockerfile` and build the image automatically
-   (via `railway.toml`).
-4. In the Railway project's **Variables** tab, add `BOT_TOKEN` and
-   `GROQ_API_KEY` (and any optional variables you want to override).
-5. Deploy. Check the **Logs** tab for `Bot started, polling for updates...`.
 
-The bot uses long polling, not webhooks, so no public URL or port
-configuration is needed on Railway.
+Run the container:
 
-Note: Railway's free usage tier and its terms change over time — this
-project is simply Railway-compatible; check Railway's current pricing
-before relying on it long-term.
 
-## Limitations
 
-Being upfront about what "free" actually means here:
+```bash
 
-- **Groq free tier limits** (subject to change — check
-  [Groq's docs](https://console.groq.com/docs) for the current numbers):
-  - Whisper (STT): ~20 requests/min, ~2,000 requests/day, 28,800
-    audio-seconds/day, 25 MB max file size.
-  - `llama-3.3-70b-versatile` (summarization): ~30 requests/min, ~1,000
-    requests/day, 100,000 tokens/day.
-  - If a limit is hit, the bot retries once automatically after a short
-    delay, then shows a clear "try again later" message — it never
-    fails silently or shows a stack trace.
-- **Telegram's 20 MB bot download limit** governs in practice, even
-  though Groq allows up to 25 MB — a bot can't download a file larger
-  than 20 MB through the standard Bot API. In practice a 10-minute voice
-  message is typically only 1–2 MB, so this is rarely an issue.
-- **No database, no persistence.** Session state (chosen language,
-  collected voice messages) lives only in memory. Restarting the bot
-  (e.g. a redeploy) clears everyone's in-progress session.
-- **Single-process polling.** This MVP is not designed for horizontal
-  scaling or very high concurrent load — it's sized for personal/small-
-  scale use.
-- **Summary quality** depends on transcription quality, which in turn
-  depends on audio clarity (background noise, overlapping speakers,
-  heavy accents can reduce accuracy).
+docker run --env-file .env voice-summary-bot
 
-## Future Improvements
+```
 
-- Optional export of the transcript as a `.txt`/`.docx` file for long recordings
-- Configurable summary length/style per user
-- A lightweight per-user rate limiter to protect the shared free API quota
-- Pluggable STT/summarization providers selectable via `.env` (the
-  architecture already supports this — see `transcription.py` and
-  `summarization.py`)
+
+
+\---
+
+
+
+\## ☁️ Deployment
+
+
+
+The repository includes configuration for deployment using Railway.
+
+
+
+The application is designed to run as a long-running Telegram polling service.
+
+
+
+Deployment configuration is provided through:
+
+
+
+```text
+
+railway.toml
+
+Dockerfile
+
+```
+
+
+
+\---
+
+
+
+\## ⚠️ Current Limitations
+
+
+
+The current version intentionally keeps the architecture simple.
+
+
+
+\* Maximum of 10 voice messages per session.
+
+\* Individual voice messages are limited by the configured processing constraints.
+
+\* Telegram's Bot API imposes a file download limit.
+
+\* No user accounts or persistent history.
+
+\* No database.
+
+\* Processing depends on external AI APIs.
+
+\* AI-generated summaries may occasionally contain inaccuracies.
+
+
+
+\---
+
+
+
+\## 🚀 Future Improvements
+
+
+
+Possible future versions could include:
+
+
+
+\* 📚 Persistent conversation history
+
+\* 👤 User accounts and profiles
+
+\* 🗂️ Saved transcripts
+
+\* 📤 Export to PDF / Markdown / TXT
+
+\* 🔎 Search through previous transcripts
+
+\* ⏱️ Automatic processing without pressing "Done"
+
+\* 🎯 Custom summary styles
+
+\* 📊 Usage statistics
+
+\* 🌐 Web interface
+
+\* 🔐 More advanced privacy controls
+
+\* 🧪 Automated test suite and CI/CD pipeline
+
+
+
+\---
+
+
+
+\## 📚 What I Learned
+
+
+
+Building this project helped me practice several areas of software and AI engineering:
+
+
+
+\* Designing modular Python applications
+
+\* Building asynchronous Telegram bots
+
+\* Working with external APIs
+
+\* Integrating speech-to-text models
+
+\* Integrating large language models
+
+\* Managing environment variables and secrets
+
+\* Handling API failures and rate limits
+
+\* Designing multi-step AI processing pipelines
+
+\* Structuring a project for maintainability
+
+\* Using Git and GitHub for version control
+
+\* Preparing applications for Docker-based deployment
+
+
+
+The main goal was not simply to connect an AI model to Telegram, but to build a complete application around the AI components.
+
+
+
+\---
+
+
+
+\## 🎓 Portfolio Context
+
+
+
+This project demonstrates my interest in \*\*Artificial Intelligence, Computer Science, and software engineering\*\*.
+
+
+
+It combines:
+
+
+
+```text
+
+Programming
+
+&#x20;    +
+
+AI / Machine Learning APIs
+
+&#x20;    +
+
+Software Architecture
+
+&#x20;    +
+
+API Integration
+
+&#x20;    +
+
+Deployment
+
+```
+
+
+
+The project was developed as a practical example of how modern AI models can be integrated into an end-user application.
+
+
+
+\---
+
+
+
+\## 📌 Project Status
+
+
+
+\*\*Status:\*\* Active / Working Prototype
+
+
+
+The core voice-to-text and AI summarization pipeline is functional and tested with multiple voice messages.
+
+
+
+\---
+
+
+
+\## 👨‍💻 Author
+
+
+
+\*\*Sanjar Inomaliev\*\*
+
+
+
+Interested in:
+
+
+
+\* Artificial Intelligence
+
+\* Computer Science
+
+\* Software Engineering
+
+\* Machine Learning
+
+\* Technology \& Entrepreneurship
+
+
+
+GitHub:
+
+https://github.com/Geaileer
+
+
+
+\---
+
+
+
+\## 📄 License
+
+
+
+This project is intended primarily as a personal educational and portfolio project.
+
+
+
